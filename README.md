@@ -42,10 +42,11 @@ shizuku/             通过 Shizuku(ADB 级) 部署 APK 的辅助脚本
 
 | 产物 | 位置 |
 |---|---|
-| 启动器 APK `3.0-b1`（约 87 MiB） | 本仓库 **Releases**（`v3.0-b1`）；本地构建产物在 `~/apkbuild/PiWebLauncher.apk` |
+| 启动器 APK `3.0-b1`（约 87 MiB） | [Release v3.0-b1](https://github.com/liuzaifengfeng/piweb-android/releases/tag/v3.0-b1) · [直接下载](https://github.com/liuzaifengfeng/piweb-android/releases/download/v3.0-b1/PiWebLauncher-3.0-b1.apk) · [SHA256](https://github.com/liuzaifengfeng/piweb-android/releases/download/v3.0-b1/PiWebLauncher-3.0-b1.apk.sha256)；本地构建产物在 `~/apkbuild/PiWebLauncher.apk` |
 | SHA-256 | `30ee2301fba9cc035a676c1bf89be6a016aba45e8f0ab92db2774ab587f7bdfb` |
 
 APK 不入库（体积原因），只作为 Release 附件发布。
+已实测：从 Release 重新下载后的 SHA-256 与上表一致。
 
 ### 必须自己安装的依赖
 
