@@ -72,10 +72,10 @@ virtual = {
 }
 size = sum(p.stat().st_size for p in files.values() if not p.is_symlink()) + sum(map(len, virtual.values()))
 archive = OUT / 'piweb.tar.gz'
-print(f'Packing {len(files)+len(virtual)} files, {size//1048576} MiB; fast compression enabled', flush=True)
+print(f'Packing {len(files)+len(virtual)} files, {size//1048576} MiB; gzip level 6 (release build)', flush=True)
 packed_bytes = 0
 next_progress = 50 * 1048576
-with open(archive.with_suffix('.tmp'), 'wb') as output, gzip.GzipFile(filename='', mode='wb', fileobj=output, mtime=0, compresslevel=1) as gz, tarfile.open(fileobj=gz, mode='w') as tar:
+with open(archive.with_suffix('.tmp'), 'wb') as output, gzip.GzipFile(filename='', mode='wb', fileobj=output, mtime=0, compresslevel=6) as gz, tarfile.open(fileobj=gz, mode='w') as tar:
     for name in sorted(set(files) | set(virtual)):
         if name in virtual:
             data = virtual[name]
@@ -86,7 +86,7 @@ with open(archive.with_suffix('.tmp'), 'wb') as output, gzip.GzipFile(filename='
         else:
             p = files[name]
             info = tar.gettarinfo(str(p), arcname=name)
-            info.mode = 0o700 if (info.mode & 0o111) or name in ('launch.sh', 'stop.sh') else 0o600
+            info.mode = 0o700 if (info.mode & 0o111) or name in ('launch.sh', 'stop.sh', 'run-server.sh', 'watchdog.sh', 'ensure-policy.sh') else 0o600
             src = None if p.is_symlink() else open(p, 'rb')
         info.uid = info.gid = info.mtime = 0
         info.uname = info.gname = ''
@@ -111,7 +111,7 @@ def sha(file):
     return h.hexdigest()
 
 manifest = {
-    'schema':1, 'version':'b1-piweb-' + pi_version, 'arch':'aarch64',
+    'schema':1, 'version':'b2-piweb-' + pi_version, 'arch':'aarch64',
     'pi_web_version':pi_version, 'node_min':'22.19.0',
     'lock_sha256':hashlib.sha256(lock_bytes).hexdigest(),
     'unpacked_bytes':size,

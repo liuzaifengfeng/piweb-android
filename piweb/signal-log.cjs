@@ -1,18 +1,17 @@
 "use strict";
-// 通过 `node --require` 预加载：只记录"pi-web 启动器收到了什么信号、什么时候"。
-// 不改变 pi-web 自己的处理逻辑（Node 会调用所有监听器）。
+// 通过 `node --require` 预加载：
+//   1. 记录"本进程收到了什么信号、什么时候收到"（用于判断是系统清理还是有人 stop）
+//   2. 若设置了 PIWEB_PIDFILE，则把自己的 pid 写进该文件，退出时删除
+//      —— stop.sh 靠这个 pid 做"只停自己这套安装"的归属校验
 //
-// 目的：下次服务再被停掉时，能区分
-//   - 整组进程同时被杀（系统清理）→ signals.log 里 policy-server 的日志也几乎同一秒
-//   - 只有 pi-web 被杀（某处执行了 stop.sh / pi-web stop）
-//
-// 另外故意拦住 SIGHUP：Termux 会话收尾时会往进程组发 SIGHUP，
-// 我们让服务忽略它，而不是被顺手带走。
+// 不改变宿主程序自己的处理逻辑（Node 会调用所有监听器）。
+// 另外故意拦住 SIGHUP：Termux 会话收尾时会往进程组发 SIGHUP，服务不应被顺手带走。
 
 const fs = require("node:fs");
 const path = require("node:path");
 
-const FILE = path.join(__dirname, "signals.log");
+const SIGNAL_LOG = process.env.PIWEB_SIGNAL_LOG || path.join(__dirname, "signals.log");
+const PID_FILE = process.env.PIWEB_PIDFILE || "";
 
 function stamp() {
   const d = new Date();
@@ -23,9 +22,26 @@ function stamp() {
 
 function note(what) {
   try {
-    fs.appendFileSync(FILE, `${stamp()} pid=${process.pid} ppid=${process.ppid} ${what}\n`);
+    fs.appendFileSync(SIGNAL_LOG, `${stamp()} pid=${process.pid} ppid=${process.ppid} ${what}\n`);
   } catch {
     /* 记录失败不影响服务 */
+  }
+}
+
+if (PID_FILE) {
+  try {
+    fs.writeFileSync(PID_FILE, String(process.pid), { mode: 0o600 });
+    const cleanup = () => {
+      try {
+        // 只删自己写的那一份，避免覆盖别人
+        if (fs.readFileSync(PID_FILE, "utf8").trim() === String(process.pid)) fs.unlinkSync(PID_FILE);
+      } catch {
+        /* 已经没了就算了 */
+      }
+    };
+    process.on("exit", cleanup);
+  } catch {
+    /* pid 写不进去不影响服务 */
   }
 }
 
@@ -36,4 +52,5 @@ for (const sig of ["SIGTERM", "SIGINT", "SIGHUP", "SIGQUIT"]) {
     /* 平台不支持就跳过 */
   }
 }
+
 note("launcher started");

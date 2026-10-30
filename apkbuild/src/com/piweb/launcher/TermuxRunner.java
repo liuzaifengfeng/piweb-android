@@ -92,8 +92,10 @@ final class TermuxRunner {
 
     /** 重启 Pi Web 服务（保留 wakelock）。 */
     static String restartServer(Context context) {
+        // --restart 让 stop.sh 启用连点保护（8 秒内刚启动过就跳过停止）；
+        // 单独的 stop.sh 调用永不做保护，免得影响手动停止与安装器自检收尾。
         return runShell(context,
-                "PIWEB_NO_BROWSER=1 " + quote(DeploymentConfig.dir() + "/stop.sh") + " && "
+                "PIWEB_NO_BROWSER=1 " + quote(DeploymentConfig.dir() + "/stop.sh") + " --restart && "
                         + "PIWEB_NO_BROWSER=1 " + quote(DeploymentConfig.dir() + "/launch.sh"),
                 "重启 Pi Web");
     }
