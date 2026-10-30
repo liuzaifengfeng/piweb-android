@@ -1,0 +1,14 @@
+# piweb 目录忽略规则
+# 这里只放"运行时脚本 + 文档"，依赖和日志都不入库。
+
+node_modules/
+
+# 运行日志（统一带时间戳）
+*.log
+
+# 运行状态文件（锁文件 / 时间戳）
+.launch.lock
+.policy.lock
+.watchdog.lock
+.last-start
+.last-stop

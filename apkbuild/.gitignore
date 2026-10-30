@@ -1,0 +1,27 @@
+# apkbuild 目录忽略规则
+# 构建产物 / 中间件 / 大文件都不入库，靠 build.py 重新生成。
+
+# 签名密钥：绝对不能进仓库
+piweb.jks
+
+# 构建产物
+*.apk
+*.idsig
+base.apk
+PiWebLauncher.apk
+
+# Android SDK 里的 jar（27 MB，自己准备）
+android.jar
+
+# build.py 生成的资源包（含 90 MB 的 piweb.tar.gz）
+assets/
+
+# 构建中间目录
+obj/
+dexdir/
+__pycache__/
+compile-check.*/
+test-work/
+
+# 本地状态
+piweb-baseline.txt

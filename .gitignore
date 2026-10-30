@@ -1,0 +1,22 @@
+# 只跟踪下面几个目录，家目录里其它东西（.pi / .ssh / archive 等）一律不入库。
+# 采用"白名单"写法：先忽略所有顶层项，再逐个放行。
+/*
+!/.gitignore
+!/README.md
+!/HANDOFF.md
+!/apkbuild/
+!/piweb/
+!/shizuku/
+
+# 任何位置的敏感/临时物
+*.log
+*.tmp
+*.swp
+.DS_Store
+__pycache__/
+*.pyc
+auth.json
+*.jks
+*.keystore
+*.apk
+*.idsig
