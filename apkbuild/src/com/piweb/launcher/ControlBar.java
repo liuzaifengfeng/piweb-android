@@ -56,6 +56,8 @@ final class ControlBar extends ScrollView {
     private final java.util.List<TextView> actions = new java.util.ArrayList<>();
     private LinearLayout col;
     private View dividerView;
+    private TextView collapseButton;
+    private boolean collapsed;
 
     private String level = "app";
     private String mode = "ask";
@@ -74,6 +76,13 @@ final class ControlBar extends ScrollView {
         col.setOrientation(LinearLayout.VERTICAL);
         int padH = Math.round(7 * d);
         col.setPadding(padH, Math.round(10 * d), padH, Math.round(10 * d));
+
+        collapseButton = button("收起 ›", d);
+        collapseButton.setContentDescription("收起或展开右侧控制栏");
+        collapseButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { setCollapsed(!collapsed); }
+        });
+        col.addView(collapseButton, lp(d, 36));
 
         // 状态徽标（点击刷新）
         statusView = new TextView(activity);
@@ -155,6 +164,13 @@ final class ControlBar extends ScrollView {
             }
         });
 
+        addAction(col, "诊断", d, new Runnable() {
+            @Override public void run() { SupportPanel.show(activity, false); }
+        });
+        addAction(col, "日志", d, new Runnable() {
+            @Override public void run() { SupportPanel.show(activity, true); }
+        });
+
         addAction(col, "安装设置", d, new Runnable() {
             @Override public void run() {
                 activity.startActivity(new Intent(activity, SetupActivity.class));
@@ -188,9 +204,37 @@ final class ControlBar extends ScrollView {
             for (TextView v : labels) v.setTextColor(cMuted);
             for (TextView v : actions) v.setTextColor(cText);
         }
+        if (collapseButton != null) {
+            collapseButton.setTextColor(cText);
+            collapseButton.setBackground(round(0x00000000, cLine, 7 * density(), density()));
+        }
         if (policyView != null) policyView.setTextColor(cMuted);
         if (dividerView != null) dividerView.setBackgroundColor(cLine);
         if (levelViews[0] != null) renderSelection();
+    }
+
+    void restoreLayout() {
+        setCollapsed(activity.getSharedPreferences("display", Activity.MODE_PRIVATE)
+                .getBoolean("sidebar_collapsed", false));
+    }
+
+    private void setCollapsed(boolean value) {
+        collapsed = value;
+        collapseButton.setText(value ? "‹" : "收起 ›");
+        collapseButton.setContentDescription(value ? "展开右侧控制栏" : "收起右侧控制栏");
+        for (int i = 0; i < col.getChildCount(); i++) {
+            View child = col.getChildAt(i);
+            if (child != collapseButton) child.setVisibility(value ? View.GONE : View.VISIBLE);
+        }
+        ViewGroup.LayoutParams params = getLayoutParams();
+        if (params != null) {
+            params.width = Math.round((value ? 40 : 104) * density());
+            setLayoutParams(params);
+        }
+        int padding = Math.round((value ? 2 : 7) * density());
+        col.setPadding(padding, col.getPaddingTop(), padding, col.getPaddingBottom());
+        activity.getSharedPreferences("display", Activity.MODE_PRIVATE).edit()
+                .putBoolean("sidebar_collapsed", value).apply();
     }
 
     private float density() {

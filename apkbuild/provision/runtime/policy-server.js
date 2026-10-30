@@ -3,6 +3,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { recentLogs } = require('./log-reader');
 const config = JSON.parse(fs.readFileSync(process.env.PIWEB_CONFIG || path.join(__dirname, 'deployment.json'), 'utf8'));
 const policy = path.join(config.agent_dir, 'permission-policy.json');
 const token = Buffer.from(config.policy_token || '');
@@ -44,6 +45,10 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/health') return send(200, {ok:true, install_dir:config.install_dir});
   const supplied = Buffer.from((req.headers.authorization || '').replace(/^Bearer /, ''));
   if (supplied.length !== token.length || !crypto.timingSafeEqual(supplied, token)) return send(401, {error:'Unauthorized'});
+  if (req.url === '/logs') {
+    if (req.method !== 'GET') return send(405, {error:'Method not allowed'});
+    return send(200, {text:recentLogs(config.install_dir, config.policy_token)});
+  }
   if (req.url !== '/policy') return send(404, {error:'Not found'});
   if (req.method === 'GET') return send(200, read());
   if (req.method !== 'POST') return send(405, {error:'Method not allowed'});

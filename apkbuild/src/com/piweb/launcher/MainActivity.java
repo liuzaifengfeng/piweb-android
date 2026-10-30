@@ -5,6 +5,10 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Intent;
+import android.content.ActivityNotFoundException;
+import android.net.Uri;
+import android.webkit.ValueCallback;
+import android.webkit.MimeTypeMap;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
@@ -34,6 +38,8 @@ public class MainActivity extends Activity {
 
     private static final String PERM_RUN_COMMAND = "com.termux.permission.RUN_COMMAND";
     private static final int REQ_PERM = 1001;
+    private static final int REQ_FILES = 1002;
+    private ValueCallback<Uri[]> fileCallback;
     private static final int MAX_POLLS = 200;          // 200 * 350ms ≈ 70s
     private static final int POLL_INTERVAL_MS = 350;
     private static final int WAKE_AT_POLL = 7;         // ≈2.5s 仍无响应 → 认为 Termux 已被杀
@@ -88,7 +94,40 @@ public class MainActivity extends Activity {
                 detectPageTheme();
             }
         });
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                                             FileChooserParams params) {
+                // A second request must not leave the previous web input waiting forever.
+                if (fileCallback != null) {
+                    callback.onReceiveValue(null);
+                    return true;
+                }
+                fileCallback = callback;
+                Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                picker.addCategory(Intent.CATEGORY_OPENABLE);
+                java.util.LinkedHashSet<String> types = new java.util.LinkedHashSet<>();
+                for (String accept : params.getAcceptTypes()) {
+                    for (String raw : accept.split(",")) {
+                        String type = raw.trim().toLowerCase(java.util.Locale.ROOT);
+                        if (type.startsWith(".")) type = MimeTypeMap.getSingleton()
+                                .getMimeTypeFromExtension(type.substring(1));
+                        if (type != null && type.matches("[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.*+-]+")) types.add(type);
+                    }
+                }
+                picker.setType(types.size() == 1 ? types.iterator().next() : "*/*");
+                if (types.size() > 1) picker.putExtra(Intent.EXTRA_MIME_TYPES, types.toArray(new String[0]));
+                picker.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE);
+                picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                try {
+                    startActivityForResult(picker, REQ_FILES);
+                } catch (ActivityNotFoundException | SecurityException e) {
+                    finishFileSelection(null);
+                    android.widget.Toast.makeText(MainActivity.this, "无法打开系统文件选择器", android.widget.Toast.LENGTH_LONG).show();
+                }
+                return true;
+            }
+        });
         webView.setBackgroundColor(Color.parseColor("#0E1116"));
         // 确保 WebView 自己能拿到焦点和触摸事件
         webView.setFocusable(true);
@@ -117,6 +156,7 @@ public class MainActivity extends Activity {
         float barD = getResources().getDisplayMetrics().density;
         row.addView(controlBar, new LinearLayout.LayoutParams(
                 Math.round(104 * barD), ViewGroup.LayoutParams.MATCH_PARENT));
+        controlBar.restoreLayout();
 
         root.addView(row, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -197,6 +237,29 @@ public class MainActivity extends Activity {
     protected void onPause() {
         resumed = false;
         super.onPause();
+    }
+
+    private void finishFileSelection(Uri[] uris) {
+        ValueCallback<Uri[]> callback = fileCallback;
+        fileCallback = null;
+        if (callback != null) callback.onReceiveValue(uris);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQ_FILES) return;
+        Uri[] selected = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+        if (selected != null) {
+            for (Uri uri : selected) {
+                // Never hand a file:// path to the web page; use system URI grants only.
+                if (uri == null || !"content".equals(uri.getScheme())) {
+                    selected = null;
+                    break;
+                }
+            }
+        }
+        finishFileSelection(selected);
     }
 
     private boolean hasRunCommandPermission() {
@@ -433,6 +496,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
+        finishFileSelection(null);
         if (webView != null) {
             webView.destroy();
         }
