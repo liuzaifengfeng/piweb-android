@@ -1,16 +1,4 @@
-# 只跟踪下面几个目录，家目录里其它东西（.pi / .ssh / archive 等）一律不入库。
-# 采用"白名单"写法：先忽略所有顶层项，再逐个放行。
-/*
-!/.gitignore
-!/README.md
-!/HANDOFF.md
-!/CHANGELOG.md
-!/KNOWN-ISSUES.md
-!/apkbuild/
-!/piweb/
-!/shizuku/
-
-# 任何位置的敏感/临时物
+# 仓库根：只忽略通用产物/本地状态；apkbuild/、piweb/ 里还有各自的 .gitignore
 *.log
 *.tmp
 *.swp
