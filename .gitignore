@@ -4,6 +4,8 @@
 !/.gitignore
 !/README.md
 !/HANDOFF.md
+!/CHANGELOG.md
+!/KNOWN-ISSUES.md
 !/apkbuild/
 !/piweb/
 !/shizuku/

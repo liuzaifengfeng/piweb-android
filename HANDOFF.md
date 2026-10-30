@@ -2,6 +2,8 @@
 
 最后更新：2026-10-30 14:10（本机 Xiaomi Pad 7 Pro / HyperOS / Termux）
 
+配套文档：`README.md`（结构与构建）、`CHANGELOG.md`（变更记录）、`KNOWN-ISSUES.md`（已知异常）。
+
 ## 一句话现状
 
 启动器 APK **3.0-b1 已构建并装在本机**（约 87 MiB，签名与资源哈希校验通过，
